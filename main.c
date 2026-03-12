@@ -15,6 +15,8 @@
  *    or kill cells in the previous generation.
  *
  */
+#include <math.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include "common.h"
 #include "life.h"
@@ -42,29 +44,37 @@ int main() {
             if(IsKeyPressed(KEY_R)) reset_map(map);
             if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 mouse_pos = GetMousePosition();
-                cell_pos.x = mouse_pos.x / (int)CELL_SIZE;
-                cell_pos.y = mouse_pos.y / (int)CELL_SIZE;
-                map[(int)cell_pos.x + 1][(int)cell_pos.y + 1] = ALIVE;
+                cell_pos.x = ceil(mouse_pos.x / CELL_SIZE);
+                cell_pos.y = ceil(mouse_pos.y / CELL_SIZE);
+                printf("%f %f %d\n", cell_pos.x, cell_pos.y, __LINE__);
+                map[(int)cell_pos.x ][(int)cell_pos.y ] = ALIVE;
             }
         }
 
         BeginDrawing();
-
         ClearBackground(BLACK);
 
-        for(int row = 0; row < MAX_ROW; row++) {
-            for(int col = 0; col < MAX_COL; col++) {
+        for(int row = 0; row <= MAX_ROW; row++) {
+            for(int col = 0; col <= MAX_COL; col++) {
                 if(map[row][col] == ALIVE) {
-                // Draw grid lines
+                    // Draw grid lines
                     Vector2 circle_pos = {
                         (row * CELL_SIZE) - (CELL_SIZE / 2),
                         (col * CELL_SIZE) - (CELL_SIZE / 2)
                     };
+
                     DrawCircleV(circle_pos, CELL_SIZE * 0.4, WHITE);
                 }
                 // Draw grid lines
                 DrawRectangleLines(row * CELL_SIZE, col * CELL_SIZE, CELL_SIZE, CELL_SIZE, WHITE);
             }
+        }
+
+        if(paused) {
+            int font_size = CELL_SIZE * .3;
+            int width = MeasureText("PAUSED", font_size);
+            DrawText("PAUSED", (SCREEN_WIDTH/2) - width, (SCREEN_HEIGHT/2) - width, font_size, BLUE);
+
         }
 
         EndDrawing();
