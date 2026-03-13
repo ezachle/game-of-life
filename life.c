@@ -8,53 +8,32 @@ void copy_map(Grid map, Grid new_map) {
     memcpy(new_map, map, sizeof(Grid));
 }
 
-void set_neighbor(Grid map, int row, int col) {
-
-}
-
 int neighbor_count(Grid map, int row, int col){
     int count = 0;
-    int i = 0;
-    while(i <= 9) {
-        switch(i) {
-            case 1:
-                if(row - 1 == 0 || col - 1 == 0) break;
-                if(map[row-1][col-1] == ALIVE) count++;
-                break;
-            case 2:
-                if(row - 1 == 0) break;
-                if(map[row][col-1] == ALIVE) count++;
-                break;
-            case 3:
-                if(row - 1 == 0 || col + 1 > MAX_COL) break;
-                if(map[row-1][col+1] == ALIVE) count++;
-                break;
-            case 4:
-                if(col - 1 == 0) break;
-                if(map[row][col-1] == ALIVE) count++;
-                break;
-            case 6:
-                if(col + 1 == 0) break;
-                if(map[row][col+1] == ALIVE) count++;
-                break;
-            case 7:
-                if(row + 1 > MAX_ROW || col - 1 == 0) break;
-                if(map[row+1][col-1] == ALIVE) count++;
-                break;
-            case 8:
-                if(row + 1 > MAX_ROW) break;
-                if(map[row+1][col] == ALIVE) count++;
-                break;
-            case 9:
-                if(row + 1 == MAX_ROW || col + 1 > MAX_COL) break;
-                if(map[row+1][col+1] == ALIVE) count++;
-                break;
-            case 5:
-            default:
-                break;
+    for(int i = -1; i <= 1; i++) {
+        for(int j = -1; j <= 1; j++) {
+            if(i == 0 && j == 0) continue;
+            if(map[row+i][col+j] == ALIVE) count++;
         }
-        i++;
+    }
+    return count;
+}
+
+void update_map(Grid map) {
+    Grid next_gen = {0};
+    for(int r = 1; r <= MAX_ROW; r++) {
+        for(int c = 1; c <= MAX_ROW; c++) {
+            int n_count = neighbor_count(map, r, c);
+            if(map[r][c] == ALIVE) {
+                // Rule 4
+                next_gen[r][c] = (n_count == 2 || n_count == 3) ?
+                    ALIVE : DEAD;
+            } else {
+                // Rule 5
+                if(n_count == 3) next_gen[r][c] = ALIVE;
+            }
+        }
     }
 
-    return count;
+    memcpy(map, next_gen, sizeof(Grid));
 }
