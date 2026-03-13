@@ -18,13 +18,19 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "common.h"
 #include "life.h"
 
+typedef struct {
+    int x;
+    int y;
+} VectorI;
+
 int main() {
+    double move_timer = 0.0;
+    double update_interval = 0.5; // measured in seconds
     bool paused = true;
     Vector2 mouse_pos;
-    Vector2 cell_pos;
+    VectorI cell_pos;
     Grid map;
     Grid new_gen;
 
@@ -37,17 +43,32 @@ int main() {
 #endif
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game of Life");
+    SetTargetFPS(30);
 
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_SPACE)) paused = !paused;
         if(paused == true) {
+            if(IsKeyPressed(KEY_RIGHT)) update_interval += 0.1;
+            if(IsKeyPressed(KEY_LEFT)) update_interval -= 0.1;
             if(IsKeyPressed(KEY_R)) reset_map(map);
             if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 mouse_pos = GetMousePosition();
                 cell_pos.x = ceil(mouse_pos.x / CELL_SIZE);
                 cell_pos.y = ceil(mouse_pos.y / CELL_SIZE);
-                printf("%f %f %d\n", cell_pos.x, cell_pos.y, __LINE__);
-                map[(int)cell_pos.x ][(int)cell_pos.y ] = ALIVE;
+                map[cell_pos.x][cell_pos.y] = 
+                    (map[cell_pos.x][cell_pos.y] == ALIVE) ?
+                    DEAD : ALIVE;
+#ifdef DEBUG
+                printf("col %d row %d status %d %d\n", cell_pos.x, cell_pos.y, map[cell_pos.x][cell_pos.y],__LINE__);
+#endif
+            }
+        }
+
+        if(paused == false) {
+            move_timer += GetFrameTime();
+            if(move_timer >= update_interval) {
+                update_map(map);
+                move_timer = 0;
             }
         }
 
@@ -65,16 +86,20 @@ int main() {
 
                     DrawCircleV(circle_pos, CELL_SIZE * 0.4, WHITE);
                 }
+
                 // Draw grid lines
-                DrawRectangleLines(row * CELL_SIZE, col * CELL_SIZE, CELL_SIZE, CELL_SIZE, WHITE);
+                DrawRectangleLines(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE, WHITE);
             }
         }
 
         if(paused) {
-            int font_size = CELL_SIZE * .3;
+            int font_size = SCREEN_WIDTH * .10;
             int width = MeasureText("PAUSED", font_size);
-            DrawText("PAUSED", (SCREEN_WIDTH/2) - width, (SCREEN_HEIGHT/2) - width, font_size, BLUE);
-
+            DrawText("PAUSED", (SCREEN_WIDTH - width) / 2, SCREEN_HEIGHT - font_size, font_size, BLUE);
+            char buf[15];
+            sprintf(buf, "Speed: %.2f", update_interval);
+            width = MeasureText(buf, font_size);
+            DrawText(buf, (SCREEN_WIDTH - width) / 2, SCREEN_HEIGHT - (font_size * 2), font_size, BLUE); 
         }
 
         EndDrawing();
