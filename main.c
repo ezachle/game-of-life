@@ -15,6 +15,7 @@
  *    or kill cells in the previous generation.
  *
  */
+
 #include <math.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -29,6 +30,7 @@ int main() {
     double move_timer = 0.0;
     double update_interval = 0.5; // measured in seconds
     bool paused = true;
+    Camera2D camera;
     Vector2 mouse_pos;
     VectorI cell_pos;
     Grid map;
@@ -43,20 +45,35 @@ int main() {
 #endif
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game of Life");
+
+    camera.rotation = 0;
+    camera.target = (Vector2){WORLD_WIDTH / 2, WORLD_HEIGHT / 2};
+    camera.offset = (Vector2){SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
+    camera.zoom = 1;
     SetTargetFPS(30);
 
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_SPACE)) paused = !paused;
-        if(paused == true) {
+        if(paused) {
             if(IsKeyPressed(KEY_RIGHT)) update_interval += 0.1;
             if(IsKeyPressed(KEY_LEFT)) update_interval -= 0.1;
-            if(IsKeyPressed(KEY_R)) reset_map(map);
-            if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                mouse_pos = GetMousePosition();
+            if(IsKeyPressed(KEY_R)) {
+                reset_map(map);
+                camera.zoom = 1.0f;
+                camera.target = (Vector2){WORLD_WIDTH / 2, WORLD_HEIGHT / 2};
+                camera.offset = (Vector2){SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
+            }
+            // TODO: Running the mouse over an ALIVE cell will erase it
+            //       add a way to discern the two
+            if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                // Gets the mouse position relative to window and converts that
+                // into a position relative to the camera(or world)
+                mouse_pos = GetScreenToWorld2D(GetMousePosition(), camera);
+
                 cell_pos.x = ceil(mouse_pos.x / CELL_SIZE);
                 cell_pos.y = ceil(mouse_pos.y / CELL_SIZE);
-                map[cell_pos.x][cell_pos.y] = 
-                    (map[cell_pos.x][cell_pos.y] == ALIVE) ?
+                map[cell_pos.y][cell_pos.x] = 
+                    (map[cell_pos.y][cell_pos.x] == ALIVE) ?
                     DEAD : ALIVE;
 #ifdef DEBUG
                 printf("col %d row %d status %d %d\n", cell_pos.x, cell_pos.y, map[cell_pos.x][cell_pos.y],__LINE__);
@@ -75,22 +92,53 @@ int main() {
         BeginDrawing();
         ClearBackground(BLACK);
 
-        for(int row = 0; row <= MAX_ROW; row++) {
-            for(int col = 0; col <= MAX_COL; col++) {
+        BeginMode2D(camera);
+
+        double wheel = GetMouseWheelMove();
+        if(wheel != 0) {
+            Vector2 mouse_world_pos = GetScreenToWorld2D(GetMousePosition(), camera);
+
+            camera.offset = GetMousePosition();
+            camera.target = mouse_world_pos;
+
+            camera.zoom += wheel * 0.5f;
+            if(camera.zoom < 0.75f) camera.zoom = 0.75f;
+            if(camera.zoom > 5.0f) camera.zoom = 5.0f;
+        }
+
+        if(IsMouseButtonDown(MOUSE_RIGHT_BUTTON)) {
+            Vector2 delta = GetMouseDelta();
+            // Subtract by the delta because of how
+            // coordinates work in computer graphics
+            camera.target.x -= delta.x / camera.zoom;
+            camera.target.y -= delta.y / camera.zoom;
+        }
+
+        for(int row = 1; row <= MAX_ROW; row++) {
+            for(int col = 1; col <= MAX_COL; col++) {
                 if(map[row][col] == ALIVE) {
                     // Draw grid lines
                     Vector2 circle_pos = {
-                        (row * CELL_SIZE) - (CELL_SIZE / 2),
-                        (col * CELL_SIZE) - (CELL_SIZE / 2)
+                        (col * CELL_SIZE) - (CELL_SIZE / 2),
+                        (row * CELL_SIZE) - (CELL_SIZE / 2)
                     };
 
                     DrawCircleV(circle_pos, CELL_SIZE * 0.4, WHITE);
                 }
 
-                // Draw grid lines
-                DrawRectangleLines(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE, WHITE);
             }
         }
+
+        if(camera.zoom >= 0.75f) {
+            for(int row = 0; row <= MAX_ROW; row++) {
+                DrawLine(0, row * CELL_SIZE, WORLD_WIDTH, row * CELL_SIZE, GRAY);
+            }
+            for(int col = 0; col <= MAX_COL; col++) {
+                DrawLine(col * CELL_SIZE, 0, col * CELL_SIZE, WORLD_HEIGHT, GRAY);
+            }
+        }
+
+        EndMode2D();
 
         if(paused) {
             int font_size = SCREEN_WIDTH * .10;
