@@ -22,7 +22,7 @@ int neighbor_count(Grid map, int row, int col){
 void update_map(Grid map) {
     Grid next_gen = {0};
     for(int r = 1; r <= MAX_ROW; r++) {
-        for(int c = 1; c <= MAX_ROW; c++) {
+        for(int c = 1; c <= MAX_COL; c++) {
             int n_count = neighbor_count(map, r, c);
             if(map[r][c] == ALIVE) {
                 // Rule 4
